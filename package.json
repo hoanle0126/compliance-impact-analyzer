@@ -1,0 +1,31 @@
+{
+  "name": "compliance-impact-analyzer-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Compliance Impact Analyzer (ImpactLens) Monorepo",
+  "packageManager": "pnpm@10.29.3",
+  "scripts": {
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down",
+    "db:generate": "pnpm --filter @impactlens/api db:generate",
+    "db:migrate": "pnpm --filter @impactlens/api db:migrate",
+    "db:seed": "pnpm --filter @impactlens/api db:seed",
+    "db:reset": "pnpm --filter @impactlens/api db:reset",
+    "build": "pnpm --recursive run build",
+    "lint": "pnpm --recursive run lint",
+    "typecheck": "pnpm --recursive run typecheck",
+    "test": "pnpm --recursive run test",
+    "test:integration": "pnpm --filter @impactlens/api test:integration",
+    "test:e2e": "pnpm --filter @impactlens/api test:e2e",
+    "test:e2e:web": "pnpm --filter @impactlens/web test:e2e",
+    "dev:api": "pnpm --filter @impactlens/api dev",
+    "dev:web": "pnpm --filter @impactlens/web dev",
+    "dev": "pnpm --parallel dev"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.5",
+    "dotenv": "^16.4.7",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.7.3"
+  }
+}

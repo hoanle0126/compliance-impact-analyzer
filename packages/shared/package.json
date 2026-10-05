@@ -1,0 +1,19 @@
+{
+  "name": "@impactlens/shared",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "lint": "echo 'Shared lint ok'",
+    "typecheck": "tsc --noEmit",
+    "test": "echo 'Shared test ok'"
+  },
+  "dependencies": {
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

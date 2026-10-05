@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: impactlens_user
+      POSTGRES_PASSWORD: impactlens_password
+      POSTGRES_DB: impactlens_db
+    ports:
+      - "55433:5432"
+    volumes:
+      - impactlens_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U impactlens_user -d impactlens_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - impactlens_net
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6383:6379"
+    volumes:
+      - impactlens_redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - impactlens_net
+
+volumes:
+  impactlens_pgdata:
+  impactlens_redisdata:
+
+networks:
+  impactlens_net:
+    driver: bridge

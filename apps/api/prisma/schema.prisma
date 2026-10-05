@@ -1,0 +1,495 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SYSTEM_ADMIN
+  COMPLIANCE_MANAGER
+  ANALYST
+  REVIEWER
+  VIEWER
+}
+
+enum OrganizationType {
+  FDI_ENTERPRISE
+  DOMESTIC_ENTERPRISE
+  LOGISTICS_PROVIDER
+  CUSTOMS_BROKER
+  EXPORT_PROCESSING_ENTERPRISE
+  OTHER
+}
+
+enum BusinessActivityType {
+  IMPORT
+  EXPORT
+  MANUFACTURING
+  DISTRIBUTION
+  WAREHOUSING
+  CUSTOMS_DECLARATION
+  E_COMMERCE
+  LOGISTICS
+  PROCESSING
+  TEMPORARY_IMPORT
+  TEMPORARY_EXPORT
+  CONSULTING
+  OTHER
+}
+
+enum FactSource {
+  USER_PROVIDED
+  IMPORTED
+  DERIVED
+  SYSTEM
+  UNKNOWN
+}
+
+enum FactConfidence {
+  VERIFIED
+  UNVERIFIED
+  INFERRED
+}
+
+enum ChangeType {
+  ADDED
+  MODIFIED
+  REPEALED
+}
+
+enum ApplicabilityStatus {
+  APPLIES
+  POTENTIALLY_APPLIES
+  DOES_NOT_APPLY
+  INSUFFICIENT_INFORMATION
+  REQUIRES_REVIEW
+}
+
+enum ApplicabilityConfidence {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum ImpactDimension {
+  LEGAL
+  CUSTOMS
+  FINANCE
+  TAX
+  OPERATIONS
+  PROCUREMENT
+  SUPPLY_CHAIN
+  LOGISTICS
+  WAREHOUSING
+  MANUFACTURING
+  SALES
+  IT_DATA
+  HR
+  REPORTING
+  DOCUMENTATION
+  RECORD_RETENTION
+  RISK
+  MANAGEMENT
+}
+
+enum SeverityLevel {
+  NONE
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum PriorityLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AnalysisWorkflowStatus {
+  DRAFT
+  ANALYZED
+  NEEDS_REVIEW
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  SUPERSEDED
+}
+
+enum ObligationType {
+  FILE
+  REPORT
+  REGISTER
+  PAY
+  RETAIN_RECORDS
+  UPDATE_PROCESS
+  OBTAIN_LICENSE
+  VERIFY
+  NOTIFY
+  DISCLOSE
+  INSPECT
+  CLASSIFY
+  OTHER
+}
+
+enum ActionOwner {
+  LEGAL
+  COMPLIANCE
+  CUSTOMS
+  FINANCE
+  PROCUREMENT
+  LOGISTICS
+  OPERATIONS
+  IT
+  MANAGEMENT
+  OTHER
+}
+
+enum ActionStatus {
+  PLANNED
+  IN_PROGRESS
+  BLOCKED
+  COMPLETED
+  CANCELLED
+}
+
+enum EvidenceSource {
+  REGULATORY_CHANGE
+  LEGAL_RAG
+  MANUAL
+  INTERNAL_KNOWLEDGE
+}
+
+model User {
+  id           String                   @id @default(uuid())
+  email        String                   @unique
+  passwordHash String
+  fullName     String
+  globalRole   UserRole                 @default(ANALYST)
+  memberships  OrganizationMembership[]
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+
+  @@map("users")
+}
+
+model Organization {
+  id              String                       @id @default(uuid())
+  legalName       String
+  displayName     String
+  organizationType OrganizationType            @default(DOMESTIC_ENTERPRISE)
+  taxId           String?
+  country         String                       @default("VIETNAM")
+  jurisdictions   String[]                     @default(["VIETNAM"])
+  industry        String
+  businessModel   String
+  employeeRange   String?
+  active          Boolean                      @default(true)
+  profileVersion  Int                          @default(1)
+  memberships     OrganizationMembership[]
+  profileVersions OrganizationProfileVersion[]
+  activities      BusinessActivity[]
+  facilities      Facility[]
+  products        ProductProfile[]
+  facts           ProfileFact[]
+  analyses        ImpactAnalysis[]
+  createdAt       DateTime                     @default(now())
+  updatedAt       DateTime                     @updatedAt
+
+  @@map("organizations")
+}
+
+model OrganizationMembership {
+  id             String       @id @default(uuid())
+  userId         String
+  organizationId String
+  role           UserRole     @default(ANALYST)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([userId, organizationId])
+  @@map("organization_memberships")
+}
+
+model OrganizationProfileVersion {
+  id                 String       @id @default(uuid())
+  organizationId     String
+  versionNumber      Int
+  profileSnapshot    Json
+  changeReason       String?
+  createdByUserId    String?
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt          DateTime     @default(now())
+
+  @@unique([organizationId, versionNumber])
+  @@map("organization_profile_versions")
+}
+
+model BusinessActivity {
+  id             String               @id @default(uuid())
+  organizationId String
+  activityType   BusinessActivityType
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime             @default(now())
+
+  @@map("business_activities")
+}
+
+model Facility {
+  id                 String       @id @default(uuid())
+  organizationId     String
+  name               String
+  location           String
+  facilityType       String
+  customsArea        String
+  isBonded           Boolean      @default(false)
+  processingActivity String?
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt          DateTime     @default(now())
+
+  @@map("facilities")
+}
+
+model ProductProfile {
+  id                   String       @id @default(uuid())
+  organizationId       String
+  category             String
+  hsCode               String
+  description          String
+  originCountries      String[]
+  destinationCountries String[]
+  isControlled         Boolean      @default(false)
+  notes                String?
+  organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt            DateTime     @default(now())
+
+  @@map("product_profiles")
+}
+
+model ProfileFact {
+  id             String         @id @default(uuid())
+  organizationId String
+  factType       String
+  valueJson      Json
+  source         FactSource     @default(USER_PROVIDED)
+  confidence     FactConfidence @default(VERIFIED)
+  notes          String?
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@map("profile_facts")
+}
+
+model RegulatoryChange {
+  id             String                 @id @default(uuid())
+  title          String
+  documentNumber String
+  authority      String
+  sourceUrl      String?
+  effectiveAt    DateTime
+  promulgatedAt  DateTime?
+  jurisdiction   String                 @default("VIETNAM")
+  status         String                 @default("ACTIVE")
+  version        String                 @default("1.0")
+  topics         String[]               @default([])
+  changes        RegulatoryChangeItem[]
+  evidences      LegalEvidence[]
+  analyses       ImpactAnalysis[]
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  @@map("regulatory_changes")
+}
+
+model RegulatoryChangeItem {
+  id            String           @id @default(uuid())
+  changeId      String
+  changeType    ChangeType
+  hierarchyPath String
+  oldContent    String?
+  newContent    String
+  article       String?
+  clause        String?
+  point         String?
+  topics        String[]         @default([])
+  change        RegulatoryChange @relation(fields: [changeId], references: [id], onDelete: Cascade)
+  createdAt     DateTime         @default(now())
+
+  @@map("regulatory_change_items")
+}
+
+model LegalEvidence {
+  id              String           @id @default(uuid())
+  changeId        String
+  documentNumber  String
+  documentTitle   String
+  sourceUrl       String?
+  hierarchyPath   String
+  article         String?
+  clause          String?
+  point           String?
+  textExcerpt     String
+  retrievalSource EvidenceSource   @default(REGULATORY_CHANGE)
+  verified        Boolean          @default(true)
+  change          RegulatoryChange @relation(fields: [changeId], references: [id], onDelete: Cascade)
+  createdAt       DateTime         @default(now())
+
+  @@map("legal_evidences")
+}
+
+model ApplicabilityRule {
+  id                  String              @id @default(uuid())
+  name                String
+  description         String
+  topic               String?
+  priority            Int                 @default(100)
+  enabled             Boolean             @default(true)
+  conditionsJson      Json
+  targetStatus        ApplicabilityStatus @default(POTENTIALLY_APPLIES)
+  explanationTemplate String
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  @@map("applicability_rules")
+}
+
+model ImpactAnalysis {
+  id                  String                  @id @default(uuid())
+  organizationId      String
+  regulatoryChangeId  String
+  activeVersionNumber Int                     @default(1)
+  status              AnalysisWorkflowStatus  @default(ANALYZED)
+  priorityScore       Int                     @default(0)
+  priorityLevel       PriorityLevel           @default(LOW)
+  confidence          ApplicabilityConfidence @default(MEDIUM)
+  summary             String
+  requiresHumanReview Boolean                 @default(true)
+  idempotencyKey      String?                 @unique
+  organization        Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  regulatoryChange    RegulatoryChange        @relation(fields: [regulatoryChangeId], references: [id], onDelete: Cascade)
+  versions            ImpactAnalysisVersion[]
+  impactAreas         ImpactArea[]
+  obligations         ComplianceObligation[]
+  recommendedActions  RecommendedAction[]
+  reviews             Review[]
+  comments            ReviewComment[]
+  auditLogs           AnalysisAuditLog[]
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+
+  @@map("impact_analyses")
+}
+
+model ImpactAnalysisVersion {
+  id                       String         @id @default(uuid())
+  analysisId               String
+  versionNumber            Int
+  basedOnRegulatoryVersion String
+  basedOnProfileVersion    Int
+  analysisEngineVersion    String         @default("1.0.0")
+  snapshotJson             Json
+  analysis                 ImpactAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  createdAt                DateTime       @default(now())
+
+  @@unique([analysisId, versionNumber])
+  @@map("impact_analysis_versions")
+}
+
+model ImpactArea {
+  id          String          @id @default(uuid())
+  analysisId  String
+  area        ImpactDimension
+  severity    SeverityLevel   @default(MEDIUM)
+  description String
+  evidenceIds String[]        @default([])
+  analysis    ImpactAnalysis  @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  createdAt   DateTime        @default(now())
+
+  @@map("impact_areas")
+}
+
+model ComplianceObligation {
+  id                    String                  @id @default(uuid())
+  analysisId            String
+  title                 String
+  description           String
+  obligationType        ObligationType          @default(OTHER)
+  responsibleDepartment ActionOwner             @default(COMPLIANCE)
+  effectiveFrom         DateTime?
+  deadline              DateTime?
+  rawDeadlineText       String?
+  evidenceIds           String[]                @default([])
+  confidence            ApplicabilityConfidence @default(MEDIUM)
+  requiresReview        Boolean                 @default(true)
+  status                String                  @default("PENDING")
+  analysis              ImpactAnalysis          @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  createdAt             DateTime                @default(now())
+
+  @@map("compliance_obligations")
+}
+
+model RecommendedAction {
+  id              String         @id @default(uuid())
+  analysisId      String
+  title           String
+  description     String
+  priority        PriorityLevel  @default(MEDIUM)
+  ownerDepartment ActionOwner    @default(COMPLIANCE)
+  dueDate         DateTime?
+  basis           String
+  evidenceIds     String[]       @default([])
+  status          ActionStatus   @default(PLANNED)
+  analysis        ImpactAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@map("recommended_actions")
+}
+
+model Review {
+  id               String                 @id @default(uuid())
+  analysisId       String
+  reviewerId       String
+  status           AnalysisWorkflowStatus
+  comments         String?
+  severityOverride SeverityLevel?
+  editedSummary    String?
+  analysis         ImpactAnalysis         @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  createdAt        DateTime               @default(now())
+
+  @@map("reviews")
+}
+
+model ReviewComment {
+  id         String         @id @default(uuid())
+  analysisId String
+  authorId   String
+  authorName String
+  authorRole UserRole
+  content    String
+  analysis   ImpactAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  createdAt  DateTime       @default(now())
+
+  @@map("review_comments")
+}
+
+model AnalysisAuditLog {
+  id             String          @id @default(uuid())
+  organizationId String?
+  analysisId     String?
+  userId         String?
+  userEmail      String?
+  action         String
+  detailsJson    Json
+  analysis       ImpactAnalysis? @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  timestamp      DateTime        @default(now())
+
+  @@map("analysis_audit_logs")
+}

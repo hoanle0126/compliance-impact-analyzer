@@ -1,0 +1,20 @@
+{
+  "name": "@impactlens/applicability-engine",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "lint": "echo 'Applicability engine lint ok'",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run src"
+  },
+  "dependencies": {
+    "@impactlens/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
+}
